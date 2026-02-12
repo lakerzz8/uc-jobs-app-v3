@@ -2,57 +2,90 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 
-const TARGET_URL = 'https://jobs.universityofcalifornia.edu/site/advancedsearch?page=1&keywords=&job_type=Full+Time&Category%5Bcategory_id%5D=&Campus%5Bcampus_id%5D=&multiple_locations=0&search=Search';
+const BASE_URL = 'https://jobs.universityofcalifornia.edu/site/advancedsearch';
+const SEARCH_PARAMS = 'keywords=&job_type=Full+Time&Category%5Bcategory_id%5D=&Campus%5Bcampus_id%5D=&multiple_locations=0&search=Search';
 
-async function scrape() {
-    console.log("Starting scraper...");
+async function scrapeIncremental() {
+    console.log("Starting incremental scrape...");
     
-    try {
-        const { data } = await axios.get(TARGET_URL, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
+    // 1. Load existing data
+    let existingJobs = [];
+    if (fs.existsSync('jobs.json')) {
+        try {
+            existingJobs = JSON.parse(fs.readFileSync('jobs.json')).results || [];
+        } catch (e) {
+            console.log("Starting fresh archive.");
+        }
+    }
 
-        const $ = cheerio.load(data);
-        const jobs = [];
+    // Create a set of URLs for O(1) lookups
+    const existingUrls = new Set(existingJobs.map(j => j.url));
+    const newJobs = [];
+    let page = 1;
+    let foundOldJob = false;
 
-        $('.jobspot').each((index, element) => {
-            if (jobs.length >= 20) return false;
+    // 2. Scrape until we hit a duplicate
+    while (!foundOldJob) {
+        console.log(`Checking page ${page}...`);
+        try {
+            const { data } = await axios.get(`${BASE_URL}?page=${page}&${SEARCH_PARAMS}`, {
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+            const $ = cheerio.load(data);
+            const pageJobSpots = $('.jobspot');
 
-            const titleElement = $(element).find('.jtitle');
-            const locationElement = $(element).find('.jloc');
-            const dateElement = $(element).find('.jclose');
+            if (pageJobSpots.length === 0) break;
 
-            if (titleElement.length > 0) {
-                const title = titleElement.text().trim();
-                const link = titleElement.attr('href');
-                let date = dateElement.text().trim().replace('Posting Date:', '').trim();
-                const fullLink = link.startsWith('http') ? link : `https://jobs.universityofcalifornia.edu${link}`;
+            for (let i = 0; i < pageJobSpots.length; i++) {
+                const el = pageJobSpots[i];
+                const titleEl = $(el).find('.jtitle');
+                const link = titleEl.attr('href');
+                const url = link.startsWith('http') ? link : `https://jobs.universityofcalifornia.edu${link}`;
 
-                jobs.push({
-                    title: title,
-                    location: locationElement.text().trim(),
-                    date: date,
-                    url: fullLink
+                // THE STOPPING CONDITION
+                if (existingUrls.has(url)) {
+                    console.log("Reached previously scraped data. Stopping.");
+                    foundOldJob = true;
+                    break;
+                }
+
+                newJobs.push({
+                    title: titleEl.text().trim(),
+                    location: $(el).find('.jloc').text().trim(),
+                    date: $(el).find('.jclose').text().replace('Posting Date:', '').trim(),
+                    scraped_at: new Date().toISOString(),
+                    url: url
                 });
             }
-        });
 
-        const output = {
-            // We save as an ISO string so the browser can parse it locally
-            updated_at: new Date().toISOString(),
-            count: jobs.length,
-            results: jobs
-        };
+            page++;
+            // Safety cap: don't loop forever if UC changes their site structure
+            if (page > 250) break; 
 
-        fs.writeFileSync('jobs.json', JSON.stringify(output, null, 2));
-        console.log(`Success! Saved ${jobs.length} jobs to jobs.json`);
-
-    } catch (error) {
-        console.error("Error scraping:", error.message);
-        process.exit(1);
+        } catch (error) {
+            console.error("Scrape error:", error.message);
+            break;
+        }
     }
+
+    // 3. Merge and Filter (Remove jobs older than 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const mergedList = [...newJobs, ...existingJobs].filter(job => {
+        const postDate = new Date(job.date);
+        return isNaN(postDate) || postDate >= thirtyDaysAgo;
+    });
+
+    // 4. Save
+    const output = {
+        updated_at: new Date().toISOString(),
+        count: mergedList.length,
+        results: mergedList.sort((a, b) => new Date(b.date) - new Date(a.date))
+    };
+
+    fs.writeFileSync('jobs.json', JSON.stringify(output, null, 2));
+    console.log(`Done! Added ${newJobs.length} new jobs. Total archive: ${mergedList.length}`);
 }
 
-scrape();
+scrapeIncremental();
