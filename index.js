@@ -8,7 +8,6 @@ const SEARCH_PARAMS = 'keywords=&job_type=Full+Time&Category%5Bcategory_id%5D=&C
 async function scrapeIncremental() {
     console.log("Starting incremental scrape...");
     
-    // 1. Load existing data
     let existingJobs = [];
     if (fs.existsSync('jobs.json')) {
         try {
@@ -18,18 +17,16 @@ async function scrapeIncremental() {
         }
     }
 
-    // Create a set of URLs for O(1) lookups
     const existingUrls = new Set(existingJobs.map(j => j.url));
     const newJobs = [];
     let page = 1;
     let foundOldJob = false;
 
-    // 2. Scrape until we hit a duplicate
     while (!foundOldJob) {
         console.log(`Checking page ${page}...`);
         try {
             const { data } = await axios.get(`${BASE_URL}?page=${page}&${SEARCH_PARAMS}`, {
-                headers: { 'User-Agent': 'Mozilla/5.0' }
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
             });
             const $ = cheerio.load(data);
             const pageJobSpots = $('.jobspot');
@@ -42,24 +39,24 @@ async function scrapeIncremental() {
                 const link = titleEl.attr('href');
                 const url = link.startsWith('http') ? link : `https://jobs.universityofcalifornia.edu${link}`;
 
-                // THE STOPPING CONDITION
                 if (existingUrls.has(url)) {
                     console.log("Reached previously scraped data. Stopping.");
                     foundOldJob = true;
                     break;
                 }
 
+                // Extract the actual "Posting Date" string (e.g., "2/11/2026")
+                const postingDate = $(el).find('.jclose').text().replace('Posting Date:', '').trim();
+
                 newJobs.push({
                     title: titleEl.text().trim(),
                     location: $(el).find('.jloc').text().trim(),
-                    date: $(el).find('.jclose').text().replace('Posting Date:', '').trim(),
-                    scraped_at: new Date().toISOString(),
+                    date: postingDate, // This is the original UC date
                     url: url
                 });
             }
 
             page++;
-            // Safety cap: don't loop forever if UC changes their site structure
             if (page > 250) break; 
 
         } catch (error) {
@@ -68,20 +65,22 @@ async function scrapeIncremental() {
         }
     }
 
-    // 3. Merge and Filter (Remove jobs older than 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    // Merge and filter by 30-day window
     const mergedList = [...newJobs, ...existingJobs].filter(job => {
         const postDate = new Date(job.date);
         return isNaN(postDate) || postDate >= thirtyDaysAgo;
     });
 
-    // 4. Save
+    // Final Sort: strictly newest posting date to oldest
+    mergedList.sort((a, b) => new Date(b.date) - new Date(a.date));
+
     const output = {
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(), // Keep this for the "Last Scraped" header
         count: mergedList.length,
-        results: mergedList.sort((a, b) => new Date(b.date) - new Date(a.date))
+        results: mergedList
     };
 
     fs.writeFileSync('jobs.json', JSON.stringify(output, null, 2));
