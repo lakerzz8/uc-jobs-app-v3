@@ -47,10 +47,13 @@ async function scrapeIncremental() {
 
                 // Extract the actual "Posting Date" string (e.g., "2/11/2026")
                 const postingDate = $(el).find('.jclose').text().replace('Posting Date:', '').trim();
+                // Extract the job category or add "N/A" when it doesn't exist
+                const category = $(el).find('.jcat').text().trim() || "N/A";
 
                 newJobs.push({
                     title: titleEl.text().trim(),
                     location: $(el).find('.jloc').text().trim(),
+                    category: category,
                     date: postingDate, // This is the original UC date
                     url: url
                 });
