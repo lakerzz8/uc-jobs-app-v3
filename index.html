@@ -46,8 +46,10 @@
 
     <div class="controls">
         <div class="search-row">
-            <input type="text" id="searchInput" placeholder="Search title, keyword, or city..." oninput="filterJobs()">
-            <button class="btn-refresh" onclick="loadJobs()">🔄</button>
+            <div style="position: relative; flex: 1;">
+                <input type="text" id="searchInput" placeholder="Search title, keyword, or city..." oninput="filterJobs">
+                <span id="clearSearch" onclick="clearSearchInput()" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #999; font-weight: bold; font-size: 1.2rem;">&times;</span>
+            </div>
         </div>
         
         <div class="filter-section">
@@ -115,6 +117,23 @@
                 el.classList.add('active');
             }
             filterJobs();
+        }
+
+        // Function to show/hide the X based on text input
+        function handleSearchInput() {
+            const input = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearSearch');
+            
+            clearBtn.style.display = input.value.length > 0 ? 'block' : 'none';
+            filterJobs();
+        }
+        
+        // Function to clear the input and reset the list
+        function clearSearchInput() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            document.getElementById('clearSearch').style.display = 'none';
+            filterJobs(); // Refresh the list to show all results
         }
 
         function filterJobs() {
