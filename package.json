@@ -1,0 +1,17 @@
+{
+  "name": "uc-jobs-scraper",
+  "version": "1.0.0",
+  "description": "Scheduled scraper for UC Jobs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "scrape": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
