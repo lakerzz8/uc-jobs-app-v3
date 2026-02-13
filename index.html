@@ -38,7 +38,8 @@
         .favorite-btn.active { color: #f1c40f; }
         
         /* Bolt Icon styling */
-        .new-icon { color: #005596; margin-left: 8px; font-size: 1rem; display: inline-block; }
+        .new-badge { background: #e74c3c; color: #fff; font-size:0.65rem; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-left: 8px; vertical-align: middle; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+
         
         .btn-reset { background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
     </style>
@@ -72,7 +73,7 @@
                 <span class="filter-label">Quick Views</span>
                 <div class="chip-container">
                     <div id="filterFavs" class="chip special" onclick="toggleSpecialFilter('favs')"><span style="color: #f1c40f;">★</span> Favorites</div>
-                    <div id="filterNew" class="chip special" onclick="toggleSpecialFilter('new')">⚡ New Since Last Visit</div>
+                    <div id="filterNew" class="chip special" onclick="toggleSpecialFilter('new')">New Since Last Visit</div>
                 </div>
             </div>
 
@@ -211,9 +212,11 @@
 
                 return `
                 <div class="job-card">
-                    <span class="favorite-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite('${j.url}', event)">★</span>
+                    <span class="favorite-btn ${isFav ? 'active' : ''}"
+                        onclick="toggleFavorite('${j.url}', event)"
+                        title="${isFav ? 'Remove from Favorites' : 'Add to Favorites'}">★</span>
                     <a href="${j.url}" target="_blank" style="text-decoration:none; color:inherit;">
-                        <div class="job-title">${j.title} ${isNew ? '<span class="new-icon">⚡</span>' : ''}</div>
+                        <div class="job-title">${j.title} ${isNew ? '<span class="new-badge" title="New since your last visit">NEW</span>' : ''}</div>
                         <div class="job-meta">
                             <span>📍 ${j.location}</span>
                             <span>📅 ${j.date}</span>
