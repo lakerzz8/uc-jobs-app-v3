@@ -1,7 +1,23 @@
 {
-  "updated_at": "2026-02-15T13:57:06.710Z",
-  "count": 1209,
+  "updated_at": "2026-02-15T19:05:56.853Z",
+  "count": 1211,
   "results": [
+    {
+      "title": "Information Systems Analyst IV - Remote",
+      "location": "San Diego Health System",
+      "category": "Information Technology",
+      "date": "2/14/2026",
+      "url": "http://jobs.ucsd.edu/bulletin/job.aspx?jobnum_in=138495",
+      "scraped_at": "2026-02-15T19:05:56.850Z"
+    },
+    {
+      "title": "PACC Customer Success Manager - Hybrid",
+      "location": "San Diego Health System",
+      "category": "Information Technology",
+      "date": "2/14/2026",
+      "url": "http://jobs.ucsd.edu/bulletin/job.aspx?jobnum_in=138502",
+      "scraped_at": "2026-02-15T19:05:56.851Z"
+    },
     {
       "title": "Pharmacist",
       "location": "San Francisco Medical Center",
